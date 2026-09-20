@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "KI Utelys",
+        "description": "Utelys som en fotocelle. Solhøyden avgjør, ikke klokka — og lyse sommernetter hoppes over.",
+        "data": {
+          "lys": "Utelysene",
+          "vaer": "Værentitet (valgfri, gir skyjustering)",
+          "terskel_paa": "Slå på under denne solhøyden",
+          "terskel_av": "Slå av over denne solhøyden",
+          "minst_morke": "Minste mørketid før vi bryr oss",
+          "senest_paa": "Senest på om kvelden",
+          "tidligst_av": "Tidligst av om natten",
+          "morgen_paa": "Morgenlys fra",
+          "morgen_av": "Morgenlys senest til",
+          "sky_justering": "Hvor mye skydekke kan flytte terskelen"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "KI Utelys",
+        "data": {
+          "lys": "Utelysene",
+          "vaer": "Værentitet (valgfri, gir skyjustering)",
+          "terskel_paa": "Slå på under denne solhøyden",
+          "terskel_av": "Slå av over denne solhøyden",
+          "minst_morke": "Minste mørketid før vi bryr oss",
+          "senest_paa": "Senest på om kvelden",
+          "tidligst_av": "Tidligst av om natten",
+          "morgen_paa": "Morgenlys fra",
+          "morgen_av": "Morgenlys senest til",
+          "sky_justering": "Hvor mye skydekke kan flytte terskelen"
+        }
+      }
+    }
+  }
+}
