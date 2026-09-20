@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256">
+  <rect width="64" height="64" rx="16" fill="#463a40"/>
+
+  <!-- Veggmontert utelampe: veggen til venstre, arm ut, skjerm og lyskjegle ned.
+       Nederst horisonten med sola halvveis under — det er den solhøyden
+       integrasjonen måler. -->
+
+  <!-- veggen -->
+  <path d="M13 12 v30" stroke="#fafbfc" stroke-width="2.6"
+        stroke-linecap="round" opacity=".45"/>
+  <!-- armen ut fra veggen -->
+  <path d="M13 20 h11" stroke="#fafbfc" stroke-width="2.6"
+        stroke-linecap="round" opacity=".7"/>
+
+  <!-- lyskjeglen -->
+  <path d="M22 30 L15 46 h26 L34 30 z" fill="#f0d682" opacity=".2"/>
+  <path d="M24 30 L20 42 h16 L32 30 z" fill="#f0d682" opacity=".32"/>
+
+  <!-- skjermen, spiss opp -->
+  <path d="M20 30 L28 20 L36 30 z" fill="none" stroke="#fafbfc"
+        stroke-width="2.8" stroke-linejoin="round" opacity=".92"/>
+  <!-- pæra under skjermen -->
+  <circle cx="28" cy="31.5" r="3" fill="#f0d682"/>
+
+  <!-- horisonten, og sola halvveis under -->
+  <path d="M8 50 h48" stroke="#fafbfc" stroke-width="2.4"
+        stroke-linecap="round" opacity=".4"/>
+  <path d="M41 50 a7 7 0 0 1 14 0 z" fill="#5ad18b" opacity=".9"/>
+</svg>

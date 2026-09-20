@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/SebastianKristo/ki-utelys/main/brand/icon.svg" width="96" align="right" alt="">
+
 # KI Utelys
 
 Utelys som en fotocelle, tilpasset norske sommernetter.
@@ -73,3 +75,24 @@ hjemme i en annen automasjon som kan slå av `ki_utelys_auto`.
 65 stykker. Solgeometrien er sjekket mot fasit ved solverv og jevndøgn, hele året kjøres
 gjennom uten unntak, og polare ytterpunkter — midnattssol og mørketid på Svalbard — gir
 riktig svar i stedet for å kaste.
+
+
+## Ikonet i Home Assistant
+
+Ikonet i **Enheter og tjenester** kommer ikke fra dette repoet. Home Assistant henter
+det fra `brands.home-assistant.io`, og for egendefinerte integrasjoner må det sendes inn
+til [home-assistant/brands](https://github.com/home-assistant/brands).
+
+Filene ligger klare i `brand/`. Slik sender du dem inn:
+
+1. Fork `home-assistant/brands`
+2. Lag mappa `custom_integrations/ki_utelys/`
+3. Kopier `icon.png` (256×256) og `icon@2x.png` (512×512) dit
+4. Åpne en pull request
+
+Fram til den er godtatt viser HA et standardikon. Det er kosmetisk — integrasjonen
+virker likt.
+
+`logo.png` og `logo@2x.png` er de samme filene. Brands-repoet bruker logoen der det er
+plass til noe bredere; har man ikke et eget ordmerke, er ikonet riktig å bruke begge
+steder.
