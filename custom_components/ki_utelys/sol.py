@@ -115,33 +115,70 @@ def blir_morkt(dag: date, breddegrad: float, terskel: float,
     return timer_under(dag, breddegrad, terskel) >= minst_timer
 
 
+def tidsligning(dag: date) -> float:
+    """Forskjellen mellom soltid og klokketid, i minutter.
+
+    Jorda går ikke jevnt rundt sola, og aksen står skrått. Derfor kommer sola opptil
+    16 minutter for tidlig i november og 14 minutter for sent i februar.
+
+    Uten denne — og uten lengdegraden under — bommet utregningen med over en time.
+    """
+    n = dag.timetuple().tm_yday
+    b = math.radians(360 / 365 * (n - 81))
+    return 9.87 * math.sin(2 * b) - 7.53 * math.cos(b) - 1.5 * math.sin(b)
+
+
+def solhoyde(dag: date, minutter: float, breddegrad: float,
+             lengdegrad: float, tidssone_timer: float) -> float:
+    """Solhøyden ved et klokkeslett, i grader.
+
+    `minutter` er minutter etter midnatt i lokal klokketid.
+
+    Klokka vår følger tidssonen, ikke sola. Oslo ligger på 10,75° øst mens sonen regnes
+    fra 15° øst, og det alene er 17 minutter. Legger man til tidsligningen, blir avviket
+    fort en halvtime — nok til at «lyset tennes 18:39» blir 20:00 i virkeligheten.
+    """
+    d = math.radians(deklinasjon(dag))
+    soltid = minutter + 4 * (lengdegrad - 15 * tidssone_timer) + tidsligning(dag)
+    h = math.radians(soltid / 4 - 180)
+    fi = math.radians(breddegrad)
+    return math.degrees(math.asin(
+        math.sin(fi) * math.sin(d) + math.cos(fi) * math.cos(d) * math.cos(h)))
+
+
 def naar_krysser(naa: datetime, breddegrad: float, terskel: float,
-                 synkende: bool) -> datetime | None:
+                 synkende: bool, lengdegrad: float = 10.75,
+                 tidssone_timer: float | None = None) -> datetime | None:
     """Når krysser sola terskelen neste gang, på vei ned eller opp?
 
-    Brukes til å fortelle når lyset slår seg på og av i kveld, slik at man ser det i
-    stedet for å lure på om automasjonen lever.
+    Vi leter oss fram minutt for minutt i stedet for å regne buen direkte. Det er
+    36 ganger dyrere — 1440 utregninger i stedet for én — og fortsatt under et
+    millisekund. Til gjengjeld slipper vi å anta at solmidnatt er klokka 00:00, som var
+    grunnen til at tidene bommet med over en time.
 
-    Returnerer None når sola ikke krysser terskelen det døgnet — midnattssol, mørketid,
+    Returnerer None når sola ikke krysser terskelen det døgnet: midnattssol, mørketid,
     eller en sommernatt der det aldri blir mørkt nok.
     """
-    dag = naa.date()
-    timer = timer_under(dag, breddegrad, terskel)
-    if timer <= 0 or timer >= 24:
-        return None
+    if tidssone_timer is None:
+        # Fra datoens egen tidssone, så sommertid følger med av seg selv.
+        off = naa.utcoffset()
+        tidssone_timer = off.total_seconds() / 3600 if off else 0.0
 
-    # Solmidnatt og solmiddag som utgangspunkt. Vi bruker lokal tid slik HA oppgir den;
-    # tidsligningen bommer med opptil ~16 minutter, og det tåler vi her.
-    halv_morke = timer / 2.0
-    midnatt = datetime.combine(dag, datetime.min.time(), tzinfo=naa.tzinfo)
+    start = naa.replace(hour=0, minute=0, second=0, microsecond=0)
+    naa_min = (naa - start).total_seconds() / 60
 
-    if synkende:
-        # Sola går under terskelen halve mørkeperioden før midnatt.
-        tid = midnatt + timedelta(hours=24 - halv_morke)
-        if tid <= naa:
-            tid += timedelta(days=1)
-    else:
-        tid = midnatt + timedelta(hours=halv_morke)
-        if tid <= naa:
-            tid += timedelta(days=1)
-    return tid
+    def h(m):
+        return solhoyde((start + timedelta(minutes=m)).date(), m % 1440,
+                        breddegrad, lengdegrad, tidssone_timer)
+
+    # Ett døgn fram fra nå, minutt for minutt.
+    forrige = h(naa_min)
+    for i in range(1, 1441):
+        m = naa_min + i
+        naavaerende = h(m)
+        kryss = (forrige >= terskel > naavaerende) if synkende \
+            else (forrige <= terskel < naavaerende)
+        if kryss:
+            return start + timedelta(minutes=m)
+        forrige = naavaerende
+    return None

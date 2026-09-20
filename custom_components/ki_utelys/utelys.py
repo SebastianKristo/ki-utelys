@@ -207,7 +207,12 @@ class Utelys:
         naa = dt_util.now()
         t_paa = self.tall("number.ki_utelys_terskel_paa", self.cfg(CONF_TERSKEL_PAA))
         t_av = self.tall("number.ki_utelys_terskel_av", self.cfg(CONF_TERSKEL_AV))
+        # Lengdegraden er like viktig som breddegraden her: Oslo ligger 4,25° vest for
+        # tidssonens midtlinje, og det alene er 17 minutter.
+        lengde = float(self.hass.config.longitude or 10.75)
         return (
-            sol.naar_krysser(naa, self.breddegrad, t_paa, synkende=True),
-            sol.naar_krysser(naa, self.breddegrad, t_av, synkende=False),
+            sol.naar_krysser(naa, self.breddegrad, t_paa, synkende=True,
+                             lengdegrad=lengde),
+            sol.naar_krysser(naa, self.breddegrad, t_av, synkende=False,
+                             lengdegrad=lengde),
         )

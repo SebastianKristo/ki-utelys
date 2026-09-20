@@ -207,3 +207,43 @@ def test_et_novemberdogn():
     assert len(bytter) <= 3, f"for mange bytter: {bytter}"
     assert any(b[1] is False for b in bytter), "lyset slås aldri av"
     assert any(b[1] is True for b in bytter), "lyset slås aldri på"
+
+
+# --------------------------------------------------- klokkeslett, ikke bare vinkler
+def test_tidspunkt_stemmer_med_virkeligheten():
+    """Sebastian så på kamera at lyset burde tennes rundt 20:00 og slukkes 06:29.
+
+    Den gamle utregningen antok at solmidnatt er klokka 00:00, og bommet med over en
+    time: den sa 18:39 og 05:32. Lengdegrad og tidsligning er det som manglet.
+    """
+    from datetime import timezone as tz
+    CEST = tz(timedelta(hours=2))
+    ned = sol.naar_krysser(datetime(2026, 9, 19, 12, 0, tzinfo=CEST),
+                           OSLO, -4.0, synkende=True, lengdegrad=10.75)
+    opp = sol.naar_krysser(datetime(2026, 9, 20, 2, 0, tzinfo=CEST),
+                           OSLO, -4.0, synkende=False, lengdegrad=10.75)
+    assert ned.hour == 19 and 45 <= ned.minute <= 59, f"fikk {ned}"
+    assert opp.hour == 6 and 20 <= opp.minute <= 40, f"fikk {opp}"
+
+
+def test_lengdegrad_flytter_tidspunktet():
+    """Lenger vest betyr senere solnedgang på klokka."""
+    from datetime import timezone as tz
+    CEST = tz(timedelta(hours=2))
+    naa = datetime(2026, 9, 19, 12, 0, tzinfo=CEST)
+    oslo = sol.naar_krysser(naa, OSLO, -4.0, True, lengdegrad=10.75)
+    vest = sol.naar_krysser(naa, OSLO, -4.0, True, lengdegrad=5.32)   # Bergen
+    assert vest > oslo
+
+
+def test_tidsligningen_har_riktig_fortegn():
+    """Sola kommer for tidlig i slutten av oktober, for sent i midten av februar."""
+    assert sol.tidsligning(date(2026, 10, 30)) > 10
+    assert sol.tidsligning(date(2026, 2, 11)) < -12
+
+
+def test_ingen_kryssing_gir_none():
+    """Midnattssol på Svalbard: terskelen krysses aldri."""
+    from datetime import timezone as tz
+    naa = datetime(2026, 6, 21, 12, 0, tzinfo=tz(timedelta(hours=2)))
+    assert sol.naar_krysser(naa, 78.0, -4.0, True, lengdegrad=15.6) is None
