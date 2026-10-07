@@ -76,6 +76,10 @@ class KiStatus(_Base):
             "morketid_i_natt": round(sol.timer_under(dag, bredde, t_paa), 2),
             "laveste_solhoyde_i_natt": round(sol.laveste_hoyde(dag, bredde), 2),
             "breddegrad": round(bredde, 3),
+            # Per lys: hva automatikken mener om det. «vaart» = vi tente eller overtok
+            # det; «manuell_siden» = når noen andre tente det mens reglene sa av.
+            "lys": {eid: {"vaart": bool(v.get("vaart")), "manuell_siden": v.get("manuell_siden"),
+                          "grunn": v.get("grunn", "")} for eid, v in self._ul.lysstatus.items()},
         }
 
 

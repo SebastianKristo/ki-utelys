@@ -133,3 +133,46 @@ def bor_lyse(
     if hoyde < p_terskel:
         return Svar(True, "Mørkt", p_terskel)
     return Svar(False, "Lyst nok", p_terskel)
+
+
+# ---------------------------------------------------------------------------
+#  Hva gjør vi med ett lys, gitt svaret?
+# ---------------------------------------------------------------------------
+MAKS_MANUELL_TIMER = 12.0
+
+
+def lys_handling(*, svar_paa: bool, lys_paa: bool, vaart: bool,
+                 manuell_timer: float | None,
+                 maks_manuell_timer: float = MAKS_MANUELL_TIMER) -> tuple[str, bool, str]:
+    """Returnerer (handling, vaart_etterpå, grunn). handling: "paa" | "av" | "ingen".
+
+    `vaart` = det var vi som tente lyset (eller overtok det). `manuell_timer` = hvor
+    lenge lyset har stått på uten at det var vårt, mens reglene sa av — None hvis
+    ikke aktuelt.
+
+    Regelen «vi slår bare av det vi slo på» sto alene før, og låste seg: et lys som
+    noen tente for hånd — eller som sto på da Home Assistant startet på nytt — ble
+    aldri vårt. Om kvelden sa reglene «på», men lyset sto jo alt på, så vi tente
+    ingenting og tok det heller ikke. Om morgenen sa reglene «av», men det var ikke
+    vårt, så det ble stående. Døgn etter døgn. Det er derfor lysene har stått på hele
+    tiden.
+
+    To ting retter det:
+
+    * Sier reglene «på» og lyset står på, overtar vi det. Vi hadde tent det uansett,
+      så vi skal også slukke det.
+    * Et lys noen andre har tent står — men ikke lenger enn `maks_manuell_timer`.
+      Da er det ikke lenger et valg, det er glemt.
+    """
+    if svar_paa:
+        if lys_paa:
+            return "ingen", True, "står på — overtatt av automatikken"
+        return "paa", True, "tenner"
+    # reglene sier av
+    if not lys_paa:
+        return "ingen", False, "av"
+    if vaart:
+        return "av", False, "slukker"
+    if manuell_timer is not None and manuell_timer >= maks_manuell_timer:
+        return "av", False, f"slått på manuelt for over {maks_manuell_timer:g} t siden — slukker"
+    return "ingen", False, "slått på manuelt — lar det stå"

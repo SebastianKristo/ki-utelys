@@ -247,3 +247,42 @@ def test_ingen_kryssing_gir_none():
     from datetime import timezone as tz
     naa = datetime(2026, 6, 21, 12, 0, tzinfo=tz(timedelta(hours=2)))
     assert sol.naar_krysser(naa, 78.0, -4.0, True, lengdegrad=15.6) is None
+
+
+# ------------------------------------------------- hva vi gjør med hvert lys
+def test_overtar_lys_som_alt_star_paa_om_kvelden():
+    """Kjernen i feilen fra oktober: reglene sa «på», lyset sto alt på, og vi tok det
+    aldri. Nå overtar vi det — vi hadde tent det uansett."""
+    h, vaart, _ = regler.lys_handling(svar_paa=True, lys_paa=True, vaart=False, manuell_timer=None)
+    assert h == "ingen" and vaart is True
+
+
+def test_slukker_det_vi_har_overtatt():
+    h, vaart, _ = regler.lys_handling(svar_paa=False, lys_paa=True, vaart=True, manuell_timer=None)
+    assert h == "av" and vaart is False
+
+
+def test_manuelt_tent_lys_star_men_ikke_evig():
+    h, _, grunn = regler.lys_handling(svar_paa=False, lys_paa=True, vaart=False, manuell_timer=2.0)
+    assert h == "ingen" and "manuelt" in grunn
+    h, _, grunn = regler.lys_handling(svar_paa=False, lys_paa=True, vaart=False, manuell_timer=12.5)
+    assert h == "av" and "over 12" in grunn
+
+
+def test_tenner_og_lar_vaere():
+    assert regler.lys_handling(svar_paa=True, lys_paa=False, vaart=False, manuell_timer=None)[0] == "paa"
+    assert regler.lys_handling(svar_paa=False, lys_paa=False, vaart=True, manuell_timer=None) == ("ingen", False, "av")
+
+
+def test_et_dogn_der_lyset_sto_paa_fra_for():
+    """Hele forløpet som låste seg: lyset står på en formiddag uten at det er vårt.
+    Formiddag: står (manuelt). Etter 12 t: slukkes. Kveld: tennes og er vårt. Morgen: slukkes."""
+    vaart = False
+    h, vaart, _ = regler.lys_handling(svar_paa=False, lys_paa=True, vaart=vaart, manuell_timer=0.0)
+    assert h == "ingen"
+    h, vaart, _ = regler.lys_handling(svar_paa=False, lys_paa=True, vaart=vaart, manuell_timer=12.0)
+    assert h == "av"
+    h, vaart, _ = regler.lys_handling(svar_paa=True, lys_paa=False, vaart=vaart, manuell_timer=None)
+    assert h == "paa" and vaart
+    h, vaart, _ = regler.lys_handling(svar_paa=False, lys_paa=True, vaart=vaart, manuell_timer=None)
+    assert h == "av" and not vaart

@@ -7,6 +7,7 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from . import regler, sol
@@ -42,10 +43,22 @@ class Utelys:
         self._av = None
         # Hva vi sist gjorde, og hvorfor. Vises på statussensoren.
         self.siste: regler.Svar | None = None
-        self.vi_slo_paa = False
+        # Per lys: tente vi det (eller overtok det), og siden når har det stått på
+        # manuelt mens reglene sa av. Lagres, så en omstart ikke gjør alle lysene
+        # «fremmede» — det var slik de ble stående på i ukevis.
+        self.lysstatus: dict[str, dict] = {}
+        self._store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
+
+    @property
+    def vi_slo_paa(self) -> bool:
+        """Bakoverkompatibelt: har vi tent (eller overtatt) minst ett av lysene?"""
+        return any(v.get("vaart") for v in self.lysstatus.values())
 
     # -- oppsett ------------------------------------------------------------
     async def async_start(self) -> None:
+        lagret = await self._store.async_load()
+        if isinstance(lagret, dict):
+            self.lysstatus = {k: dict(v) for k, v in lagret.get("lys", {}).items() if isinstance(v, dict)}
         self._av = async_track_time_interval(self.hass, self._tikk, INTERVALL)
         await self._tikk(dt_util.now())
 
@@ -173,21 +186,39 @@ class Utelys:
         if not lys:
             return
 
+        endret = False
         for eid in lys:
             s = self.st(eid)
             if not s:
                 continue
             er_paa = s.state == "on"
-            if svar.paa and not er_paa:
+            st = self.lysstatus.setdefault(eid, {"vaart": False, "manuell_siden": None})
+            manuell_timer = None
+            if er_paa and not st.get("vaart") and not svar.paa:
+                siden = dt_util.parse_datetime(st["manuell_siden"]) if st.get("manuell_siden") else None
+                if siden is None:
+                    st["manuell_siden"] = naa.isoformat(timespec="seconds")
+                    endret = True
+                    manuell_timer = 0.0
+                else:
+                    manuell_timer = (naa - siden).total_seconds() / 3600.0
+            handling, vaart, grunn = regler.lys_handling(
+                svar_paa=svar.paa, lys_paa=er_paa, vaart=bool(st.get("vaart")), manuell_timer=manuell_timer)
+            if handling == "paa":
                 await self._sett(eid, True)
-                self.vi_slo_paa = True
-            elif not svar.paa and er_paa:
-                # Vi slår bare av det VI slo på. Har noen tent lyset manuelt, står det
-                # — den som trykket vet best hvorfor.
-                if self.vi_slo_paa:
-                    await self._sett(eid, False)
-        if not svar.paa:
-            self.vi_slo_paa = False
+            elif handling == "av":
+                await self._sett(eid, False)
+                _LOGGER.info("ki_utelys: %s — %s", eid, grunn)
+            if handling != "ingen" or vaart != bool(st.get("vaart")):
+                endret = True
+            st["vaart"] = vaart
+            st["grunn"] = grunn
+            if vaart or not er_paa:
+                if st.get("manuell_siden"):
+                    endret = True
+                st["manuell_siden"] = None
+        if endret:
+            self._store.async_delay_save(lambda: {"lys": self.lysstatus}, 5)
 
     async def _sett(self, eid: str, paa: bool) -> None:
         domene = eid.split(".")[0]
